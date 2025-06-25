@@ -211,7 +211,7 @@ void Init_CAN_Filter(CAN_HandleTypeDef* hcan)
       .FilterMode = CAN_FILTERMODE_IDMASK,
       .FilterScale = CAN_FILTERSCALE_32BIT
   };
-  HAL_CAN_ConfigFilter(hcan, *canFilter);
+  HAL_CAN_ConfigFilter(hcan, &canFilter);
 }
 
 /* USER CODE END 4 */
