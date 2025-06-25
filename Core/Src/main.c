@@ -32,8 +32,8 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-CAN_HandleTypeDef hcan1;
-CAN_HandleTypeDef hcan2;
+extern CAN_HandleTypeDef hcan1;
+extern CAN_HandleTypeDef hcan2;
 
 CAN_TxHeaderTypeDef TxHeader;
 CAN_RxHeaderTypeDef RxHeader;
@@ -188,13 +188,13 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
   }
 }
 
-void Init_Header(void)
+void Init_TxHeader(void)
 {
+  TxHeader.DLC = 8;
   TxHeader.StdId = 0x321;
   TxHeader.ExtId = 0;
   TxHeader.IDE = CAN_ID_STD;
   TxHeader.RTR = CAN_RTR_DATA;
-  TxHeader.StdId = 8;
   TxHeader.TransmitGlobalTime = DISABLE;
 }
 
