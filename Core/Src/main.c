@@ -22,12 +22,14 @@
 #include "i2c.h"
 #include "i2s.h"
 #include "spi.h"
+#include "usart.h"
 #include "usb_host.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stm32f4xx_hal.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -52,7 +54,7 @@ CAN_RxHeaderTypeDef RxHeader1, RxHeader2;
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t TxData1[8] = {1,2,3,4,5,6,7,8};
+uint8_t TxData1[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 uint8_t TxData2[8] = {10, 20, 30, 40, 50, 60, 70, 80};
 
 uint8_t RxData1[8];
@@ -67,7 +69,8 @@ void MX_USB_HOST_Process(void);
 
 /* USER CODE BEGIN PFP */
 void Init_TxHeaders(void);
-void Init_CAN_Filter(CAN_HandleTypeDef* hcan);
+void Init_CAN1_Filter(CAN_HandleTypeDef* hcan);
+void Init_CAN2_Filter(CAN_HandleTypeDef* hcan);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -110,17 +113,18 @@ int main(void)
   MX_USB_HOST_Init();
   MX_CAN1_Init();
   MX_CAN2_Init();
+  MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
   Init_TxHeaders();
-  Init_CAN_Filter(&hcan1);
-  Init_CAN_Filter(&hcan2);
+  Init_CAN1_Filter(&hcan1);
+  Init_CAN2_Filter(&hcan2);
 
 
   HAL_CAN_Start(&hcan1);
   HAL_CAN_Start(&hcan2);
 
   HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
-  HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO0_MSG_PENDING);
+  HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO1_MSG_PENDING);
 
   uint32_t tick1 = HAL_GetTick();
   uint32_t tick2 = HAL_GetTick();
@@ -201,15 +205,21 @@ void SystemClock_Config(void)
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-  if (hcan -> Instance == CAN2)
-  {
-    HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader2, RxData2);
-    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);     // green
-  }
-  else if (hcan -> Instance == CAN1)
+  printf("HAL_CAN_RxFifo0MsgPendingCallback\r\n");
+  if (hcan -> Instance == CAN1)
   {
     HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader1, RxData1);
-    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14);    // red
+    printf("%d, %d, %d\r\n", RxData1[0], RxData1[1], RxData1[2]);
+  }
+}
+
+void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
+{
+  printf("HAL_CAN_RxFifo1MsgPendingCallback\r\n");
+  if (hcan -> Instance == CAN2)
+  {
+    HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO1, &RxHeader2, RxData2);
+    printf("%d, %d, %d\r\n", RxData2[0], RxData2[1], RxData2[2]);
   }
 }
 
@@ -230,20 +240,32 @@ void Init_TxHeaders(void)
   TxHeader2.TransmitGlobalTime = DISABLE;
 }
 
-void Init_CAN_Filter(CAN_HandleTypeDef* hcan)
+void Init_CAN1_Filter(CAN_HandleTypeDef* hcan)
 {
-  CAN_FilterTypeDef canFilter = {
-      .FilterActivation = ENABLE,
-      .FilterBank = 0,
-      .FilterFIFOAssignment = CAN_FILTER_FIFO0,
-      .FilterIdHigh = 0x0000,
-      .FilterIdLow = 0x0000,
-      .FilterMaskIdHigh = 0x0000,
-      .FilterMaskIdLow = 0x0000,
-      .FilterMode = CAN_FILTERMODE_IDMASK,
-      .FilterScale = CAN_FILTERSCALE_32BIT
-  };
-  HAL_CAN_ConfigFilter(hcan, &canFilter);
+  CAN_FilterTypeDef canfil;
+  canfil.FilterBank = 0;
+  canfil.FilterMode = CAN_FILTERMODE_IDMASK;
+  canfil.FilterFIFOAssignment = CAN_RX_FIFO0;
+  canfil.FilterIdHigh = 0;
+  canfil.FilterIdLow = 0;
+  canfil.FilterScale = CAN_FILTERSCALE_32BIT;
+  canfil.FilterActivation = ENABLE;
+  canfil.SlaveStartFilterBank = 14;
+  HAL_CAN_ConfigFilter(hcan, &canfil);
+}
+
+void Init_CAN2_Filter(CAN_HandleTypeDef* hcan)
+{
+  CAN_FilterTypeDef canfil;
+  canfil.FilterBank = 14;
+  canfil.FilterMode = CAN_FILTERMODE_IDMASK;
+  canfil.FilterFIFOAssignment = CAN_RX_FIFO1;
+  canfil.FilterIdHigh = 0;
+  canfil.FilterIdLow = 0;
+  canfil.FilterScale = CAN_FILTERSCALE_32BIT;
+  canfil.FilterActivation = ENABLE;
+  canfil.SlaveStartFilterBank = 14;
+  HAL_CAN_ConfigFilter(hcan, &canfil);
 }
 
 
